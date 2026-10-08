@@ -187,6 +187,9 @@ dependencies {
     api "androidx.window:window:$rootProject.ext.windowVersion"
     api "androidx.media:media:$rootProject.ext.mediaVersion"
     api 'androidx.gridlayout:gridlayout:1.0.0'
+
+    // YouTube link extraction for "Download" in the network stream screen
+    implementation "com.github.TeamNewPipe:NewPipeExtractor:$rootProject.ext.newPipeExtractorVersion"
     api "androidx.car.app:app:$rootProject.ext.carVersion"
 
     ksp ("org.xerial:sqlite-jdbc:jdbcVersion")

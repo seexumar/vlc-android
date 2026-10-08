@@ -1447,4 +1447,17 @@
     <string name="feedback_email_warning_try_anyway">Try anyway</string>
     <string name="forum_url" translatable="false">https://forum.videolan.org/viewforum.php?f=35</string>
     <string name="doc_url" translatable="false">https://docs.videolan.me/vlc-user/android/</string>
+
+    <!-- YouTube link download -->
+    <string name="yt_download">Download</string>
+    <string name="yt_download_choose_quality">Choose a quality</string>
+    <string name="yt_download_resolving">Reading video information…</string>
+    <string name="yt_download_resolve_failed">Couldn\'t read this YouTube link: %s</string>
+    <string name="yt_download_no_streams">No downloadable stream found for this video</string>
+    <string name="yt_download_channel">YouTube downloads</string>
+    <string name="yt_download_started">Downloading “%s”</string>
+    <string name="yt_download_progress">Downloading %1$s (%2$d%%)</string>
+    <string name="yt_download_merging">Merging audio and video…</string>
+    <string name="yt_download_done">Saved to your library: %s</string>
+    <string name="yt_download_failed">Download failed: %s</string>
 </resources>

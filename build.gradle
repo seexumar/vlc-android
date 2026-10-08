@@ -26,6 +26,11 @@ allprojects {
         google()
         mavenCentral()
         mavenLocal()
+        // NewPipeExtractor (YouTube link download) is published on JitPack only
+        maven {
+            url "https://jitpack.io"
+            content { includeGroup "com.github.TeamNewPipe" }
+        }
     }
     tasks.withType(Javadoc) {
         // Ignores errors from mavenAndroidJavadocs task
@@ -80,6 +85,7 @@ ext {
     targetSdkVersion = 36
     compileSdkVersion = 36 // Dockers: 3.0=36 / 4.0=36
     desugarLib = '2.0.4'
+    newPipeExtractorVersion = 'v0.26.5'
     androidxLegacyVersion = '1.0.0'
     androidxCoreVersion = '1.12.0'
     appCompatVersion = '1.6.1'
