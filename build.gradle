@@ -85,6 +85,7 @@ ext {
     targetSdkVersion = 36
     compileSdkVersion = 36 // Dockers: 3.0=36 / 4.0=36
     desugarLib = '2.0.4'
+    // If JitPack fails to serve the tag, use its commit hash instead: f9e6bb808f82bf3e4dc1f2a29a16fd376931c8ef
     newPipeExtractorVersion = 'v0.26.5'
     androidxLegacyVersion = '1.0.0'
     androidxCoreVersion = '1.12.0'

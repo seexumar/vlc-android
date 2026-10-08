@@ -11,6 +11,7 @@
  *****************************************************************************/
 package org.videolan.vlc.gui.network.youtube
 
+import android.os.Build
 import android.os.Parcelable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -81,7 +82,8 @@ object YouTubeExtractor {
         val bestM4a: AudioStream? = audioCandidates.filter { it.format == MediaFormat.M4A }.maxByOrNull { it.averageBitrate }
 
         // HD: H.264 video-only MP4 tracks, muxed on-device with the M4A audio (MediaMuxer only accepts AVC + AAC in MP4)
-        if (bestM4a != null) {
+        // MediaMuxer needs API 18; VLC 3 still supports API 17, where only progressive/audio are offered
+        if (bestM4a != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
             info.videoOnlyStreams
                     .filter { it.isUrl && it.deliveryMethod == DeliveryMethod.PROGRESSIVE_HTTP }
                     .filter { it.format == MediaFormat.MPEG_4 && it.codec?.startsWith("avc1") == true }

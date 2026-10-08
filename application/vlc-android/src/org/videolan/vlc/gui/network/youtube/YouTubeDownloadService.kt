@@ -108,7 +108,8 @@ class YouTubeDownloadService : LifecycleService() {
         val muxed = File(workDir, "muxed.mp4")
         try {
             withContext(Dispatchers.IO) {
-                val hasAudioTrack = option.audioUrl != null
+                // Muxed options are only offered on API 18+ (see YouTubeExtractor)
+                val hasAudioTrack = option.audioUrl != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2
                 // Weight progress: video track is most of the bytes when muxing
                 download(option.url, main) { p -> updateProgress(title, if (hasAudioTrack) p * 85 / 100 else p) }
                 val finalFile = if (hasAudioTrack) {
@@ -181,6 +182,7 @@ class YouTubeDownloadService : LifecycleService() {
     // ---- Muxing -------------------------------------------------------------------------------
 
     /** Combine an H.264 video-only MP4 and an AAC M4A into one MP4, without re-encoding. */
+    @androidx.annotation.RequiresApi(Build.VERSION_CODES.JELLY_BEAN_MR2)
     private fun mux(videoFile: File, audioFile: File, output: File) {
         val videoExtractor = MediaExtractor().apply { setDataSource(videoFile.path) }
         val audioExtractor = MediaExtractor().apply { setDataSource(audioFile.path) }
