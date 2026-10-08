@@ -64,6 +64,7 @@ private const val REMOTE_ACCESS_CHANNEL_ID = "vlc_remote_access"
 private const val REMOTE_ACCESS_OTP_CHANNEL_ID = "vlc_remote_access_otp"
 const val MISC_CHANNEL_ID = "misc"
 private const val RECOMMENDATION_CHANNEL_ID = "vlc_recommendations"
+private const val YOUTUBE_DOWNLOAD_CHANNEL_ID = "vlc_youtube_download"
 
 object NotificationHelper {
     const val TAG = "VLC/NotificationHelper"
@@ -228,6 +229,28 @@ object NotificationHelper {
         return remoteAccessCompatBuilder.build()
     }
 
+    /**
+     * Notification for [org.videolan.vlc.gui.network.youtube.YouTubeDownloadService]
+     *
+     * @param progress download percentage, or a negative value for an indeterminate bar
+     * @param ongoing true while the download runs, false for the final result notification
+     */
+    fun createYouTubeDownloadNotification(ctx: Context, text: String, progress: Int, ongoing: Boolean, audio: Boolean): Notification {
+        val intent = Intent(Intent.ACTION_VIEW).setClassName(ctx, START_ACTIVITY)
+        val builder = NotificationCompat.Builder(ctx, YOUTUBE_DOWNLOAD_CHANNEL_ID)
+                .setContentIntent(PendingIntent.getActivity(ctx, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
+                .setSmallIcon(if (audio) R.drawable.ic_notif_audio else R.drawable.ic_notif_video)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setContentTitle(ctx.getString(R.string.yt_download))
+                .setContentText(text)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+                .setOnlyAlertOnce(true)
+                .setOngoing(ongoing)
+                .setAutoCancel(!ongoing)
+        if (ongoing) builder.setCategory(NotificationCompat.CATEGORY_PROGRESS).setProgress(100, progress.coerceAtLeast(0), progress < 0)
+        return builder.build()
+    }
+
     @RequiresApi(api = Build.VERSION_CODES.O)
     fun createNotificationChannels(appCtx: Context) {
         if (!AndroidUtil.isOOrLater) return
@@ -279,6 +302,16 @@ object NotificationHelper {
         if (notificationManager.getNotificationChannel(MISC_CHANNEL_ID) == null ) {
             val name = appCtx.getString(R.string.misc)
             val channel = NotificationChannel(MISC_CHANNEL_ID, name, NotificationManager.IMPORTANCE_LOW)
+            channel.lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+            channels.add(channel)
+        }
+
+        // YouTube download channel
+        if (notificationManager.getNotificationChannel(YOUTUBE_DOWNLOAD_CHANNEL_ID) == null ) {
+            val name = appCtx.getString(R.string.yt_download_channel)
+            val description = appCtx.getString(R.string.yt_download_channel_description)
+            val channel = NotificationChannel(YOUTUBE_DOWNLOAD_CHANNEL_ID, name, NotificationManager.IMPORTANCE_LOW)
+            channel.description = description
             channel.lockscreenVisibility = Notification.VISIBILITY_PUBLIC
             channels.add(channel)
         }

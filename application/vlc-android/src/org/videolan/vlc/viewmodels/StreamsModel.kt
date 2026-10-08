@@ -23,10 +23,14 @@ package org.videolan.vlc.viewmodels
 import android.content.Context
 import android.util.Log
 import androidx.databinding.ObservableField
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onCompletion
@@ -39,6 +43,8 @@ import org.videolan.resources.util.getFromMl
 import org.videolan.tools.CoroutineContextProvider
 import org.videolan.vlc.BuildConfig
 import org.videolan.vlc.PlaybackService
+import org.videolan.vlc.gui.network.youtube.YouTubeExtractor
+import org.videolan.vlc.gui.network.youtube.YouTubeVideo
 import org.videolan.vlc.util.DummyMediaWrapperProvider
 import org.videolan.vlc.util.EmptyPBSCallback
 
@@ -46,6 +52,11 @@ class StreamsModel(context: Context, private val showDummy: Boolean = false, cor
     var deletingMedia: MediaWrapper? = null
     val observableSearchText = ObservableField<String>()
     var service: PlaybackService? = null
+
+    private val _youTubeState = MutableLiveData<YouTubeResolveState>(YouTubeResolveState.Idle)
+    /** State of the YouTube link being resolved for download, observed by the download sheet */
+    val youTubeState: LiveData<YouTubeResolveState> = _youTubeState
+    private var youTubeJob: Job? = null
 
     private val serviceCb = object : PlaybackService.Callback by EmptyPBSCallback {
         override fun update() = refresh()
@@ -87,6 +98,30 @@ class StreamsModel(context: Context, private val showDummy: Boolean = false, cor
         }
     }
 
+    /**
+     * Resolve the available download qualities of a YouTube [link]
+     * Result is published in [youTubeState]
+     */
+    fun resolveYouTube(link: String) {
+        youTubeJob?.cancel()
+        _youTubeState.value = YouTubeResolveState.Loading
+        youTubeJob = viewModelScope.launch {
+            _youTubeState.value = try {
+                YouTubeResolveState.Loaded(YouTubeExtractor.resolve(link))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e("VLC/StreamsModel", "YouTube extraction failed", e)
+                YouTubeResolveState.Error(e.message ?: e.javaClass.simpleName)
+            }
+        }
+    }
+
+    fun cancelYouTube() {
+        youTubeJob?.cancel()
+        _youTubeState.value = YouTubeResolveState.Idle
+    }
+
     private fun onServiceChanged(service: PlaybackService?) {
         if (this.service == service) return
         if (service != null) {
@@ -104,4 +139,11 @@ class StreamsModel(context: Context, private val showDummy: Boolean = false, cor
             return StreamsModel(context.applicationContext, showDummy) as T
         }
     }
+}
+
+sealed class YouTubeResolveState {
+    object Idle : YouTubeResolveState()
+    object Loading : YouTubeResolveState()
+    class Loaded(val video: YouTubeVideo) : YouTubeResolveState()
+    class Error(val message: String) : YouTubeResolveState()
 }

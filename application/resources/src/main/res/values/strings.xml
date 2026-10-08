@@ -1455,6 +1455,11 @@
     <string name="yt_download_resolve_failed">Couldn\'t read this YouTube link: %s</string>
     <string name="yt_download_no_streams">No downloadable stream found for this video</string>
     <string name="yt_download_channel">YouTube downloads</string>
+    <string name="yt_download_channel_description">Progress of videos downloaded from YouTube links</string>
+    <string name="yt_download_video_option">%1$s · %2$s</string>
+    <string name="yt_download_hd_option">%1$s · %2$s · HD</string>
+    <string name="yt_download_audio_option">Audio only · %1$s</string>
+    <string name="yt_download_audio_option_no_bitrate">Audio only</string>
     <string name="yt_download_started">Downloading “%s”</string>
     <string name="yt_download_progress">Downloading %1$s (%2$d%%)</string>
     <string name="yt_download_merging">Merging audio and video…</string>

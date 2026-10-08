@@ -1,19 +1,25 @@
 /*****************************************************************************
  * YouTubeDownloadService.kt
- *
- * Foreground service that downloads a resolved YouTube stream, muxes
- * separate audio/video tracks when needed, and saves the result to the
- * shared Movies/VLC (or Music/VLC) folder so VLC's library picks it up.
+ *****************************************************************************
+ * Copyright © 2026 VLC authors and VideoLAN
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
  *****************************************************************************/
 package org.videolan.vlc.gui.network.youtube
 
 import android.app.Notification
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.ContentValues
 import android.content.Context
@@ -28,9 +34,9 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
-import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
+import org.videolan.libvlc.util.AndroidUtil
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
@@ -43,6 +49,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.videolan.resources.util.parcelable
 import org.videolan.vlc.R
+import org.videolan.vlc.gui.helpers.NotificationHelper
 import org.videolan.vlc.reloadLibrary
 import java.io.File
 import java.io.FileOutputStream
@@ -53,7 +60,6 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.coroutineContext
 
 private const val TAG = "VLC/YouTubeDownload"
-private const val CHANNEL_ID = "vlc_youtube_download"
 private const val PROGRESS_NOTIFICATION_ID = 0x7954
 private const val EXTRA_TITLE = "yt_title"
 private const val EXTRA_OPTION = "yt_option"
@@ -83,10 +89,10 @@ class YouTubeDownloadService : LifecycleService() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
-        createChannel()
+        if (AndroidUtil.isOOrLater) NotificationHelper.createNotificationChannels(applicationContext)
         val title = intent?.getStringExtra(EXTRA_TITLE)
         val option = intent?.parcelable<YouTubeDownloadOption>(EXTRA_OPTION)
-        goForeground(progressNotification(getString(R.string.yt_download_started, title ?: ""), 0, true))
+        goForeground(progressNotification(getString(R.string.yt_download_started, title ?: ""), -1, option?.isAudioOnly == true))
         if (title == null || option == null) {
             stopIfIdle()
             return START_NOT_STICKY
@@ -111,21 +117,21 @@ class YouTubeDownloadService : LifecycleService() {
                 // Muxed options are only offered on API 18+ (see YouTubeExtractor)
                 val hasAudioTrack = option.audioUrl != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2
                 // Weight progress: video track is most of the bytes when muxing
-                download(option.url, main) { p -> updateProgress(title, if (hasAudioTrack) p * 85 / 100 else p) }
+                download(option.url, main) { p -> updateProgress(title, if (hasAudioTrack) p * 85 / 100 else p, option.isAudioOnly) }
                 val finalFile = if (hasAudioTrack) {
-                    download(option.audioUrl!!, audio) { p -> updateProgress(title, 85 + p * 10 / 100) }
+                    download(option.audioUrl!!, audio) { p -> updateProgress(title, 85 + p * 10 / 100, false) }
                     notificationManager.notify(PROGRESS_NOTIFICATION_ID,
-                            progressNotification(getString(R.string.yt_download_merging), 0, true))
+                            progressNotification(getString(R.string.yt_download_merging), -1, false))
                     mux(main, audio, muxed)
                     muxed
                 } else main
                 publish(finalFile, title, option)
             }
             reloadLibrary()
-            notifyResult(getString(R.string.yt_download_done, title))
+            notifyResult(getString(R.string.yt_download_done, title), option.isAudioOnly)
         } catch (e: Exception) {
             Log.e(TAG, "Download failed", e)
-            notifyResult(getString(R.string.yt_download_failed, e.message ?: e.javaClass.simpleName))
+            notifyResult(getString(R.string.yt_download_failed, e.message ?: e.javaClass.simpleName), option.isAudioOnly)
         } finally {
             main.delete(); audio.delete(); muxed.delete()
         }
@@ -273,42 +279,22 @@ class YouTubeDownloadService : LifecycleService() {
 
     // ---- Notifications ------------------------------------------------------------------------
 
-    private fun createChannel() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-        if (notificationManager.getNotificationChannel(CHANNEL_ID) != null) return
-        notificationManager.createNotificationChannel(NotificationChannel(CHANNEL_ID,
-                getString(R.string.yt_download_channel), NotificationManager.IMPORTANCE_LOW))
-    }
-
     private fun goForeground(notification: Notification) {
         val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC else 0
         ServiceCompat.startForeground(this, PROGRESS_NOTIFICATION_ID, notification, type)
     }
 
-    private fun progressNotification(text: String, percent: Int, indeterminate: Boolean) =
-            NotificationCompat.Builder(this, CHANNEL_ID)
-                    .setSmallIcon(android.R.drawable.stat_sys_download)
-                    .setContentTitle(getString(R.string.yt_download))
-                    .setContentText(text)
-                    .setOnlyAlertOnce(true)
-                    .setOngoing(true)
-                    .setProgress(100, percent, indeterminate)
-                    .build()
+    private fun progressNotification(text: String, percent: Int, audio: Boolean) =
+            NotificationHelper.createYouTubeDownloadNotification(this, text, percent, ongoing = true, audio = audio)
 
-    private fun updateProgress(title: String, percent: Int) {
+    private fun updateProgress(title: String, percent: Int, audio: Boolean) {
         notificationManager.notify(PROGRESS_NOTIFICATION_ID,
-                progressNotification(getString(R.string.yt_download_progress, title, percent), percent, false))
+                progressNotification(getString(R.string.yt_download_progress, title, percent), percent, audio))
     }
 
-    private fun notifyResult(text: String) {
-        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-                .setSmallIcon(android.R.drawable.stat_sys_download_done)
-                .setContentTitle(getString(R.string.yt_download))
-                .setContentText(text)
-                .setStyle(NotificationCompat.BigTextStyle().bigText(text))
-                .setAutoCancel(true)
-                .build()
-        notificationManager.notify(resultNotificationId++, notification)
+    private fun notifyResult(text: String, audio: Boolean) {
+        notificationManager.notify(resultNotificationId++,
+                NotificationHelper.createYouTubeDownloadNotification(this, text, 0, ongoing = false, audio = audio))
     }
 
     private fun stopIfIdle() {

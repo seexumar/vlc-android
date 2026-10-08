@@ -26,7 +26,6 @@ import android.graphics.Rect
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
-import android.util.Log
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.Menu
@@ -45,8 +44,6 @@ import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -66,8 +63,8 @@ import org.videolan.vlc.gui.MainActivity
 import org.videolan.vlc.gui.dialogs.CONFIRM_RENAME_DIALOG_RESULT
 import org.videolan.vlc.gui.dialogs.RENAME_DIALOG_MEDIA
 import org.videolan.vlc.gui.dialogs.RENAME_DIALOG_NEW_NAME
+import org.videolan.vlc.gui.dialogs.YouTubeDownloadDialog
 import org.videolan.vlc.gui.helpers.UiTools
-import org.videolan.vlc.gui.network.youtube.YouTubeDownloadService
 import org.videolan.vlc.gui.network.youtube.YouTubeExtractor
 import org.videolan.vlc.interfaces.BrowserFragmentInterface
 import org.videolan.vlc.viewmodels.StreamsModel
@@ -201,46 +198,14 @@ class MRLPanelFragment : BaseFragment(), View.OnKeyListener, TextView.OnEditorAc
 
 
     /**
-     * Resolve the YouTube link in the field, let the user pick a quality,
-     * then hand the download to [YouTubeDownloadService].
+     * Open the quality picker for the YouTube link in the field.
+     * Resolution happens in [StreamsModel.resolveYouTube], download in [YouTubeDownloadService].
      */
     private fun downloadYouTubeLink() {
         val link = viewModel.observableSearchText.get()?.trim()
         if (!YouTubeExtractor.isYouTubeLink(link)) return
         hideKeyboard()
-        val progress = MaterialAlertDialogBuilder(requireContext())
-                .setMessage(R.string.yt_download_resolving)
-                .setCancelable(true)
-                .show()
-        val job = lifecycleScope.launch {
-            val video = try {
-                YouTubeExtractor.resolve(link!!)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Log.e(TAG, "YouTube extraction failed", e)
-                progress.dismiss()
-                UiTools.snacker(requireActivity(), getString(R.string.yt_download_resolve_failed, e.message ?: e.javaClass.simpleName))
-                return@launch
-            }
-            progress.dismiss()
-            if (!isAdded) return@launch
-            if (video.options.isEmpty()) {
-                UiTools.snacker(requireActivity(), getString(R.string.yt_download_no_streams))
-                return@launch
-            }
-            MaterialAlertDialogBuilder(requireContext())
-                    .setTitle(video.title)
-                    .setItems(video.options.map { it.label }.toTypedArray()) { _, which ->
-                        val ctx = context?.applicationContext ?: return@setItems
-                        YouTubeDownloadService.start(ctx, video.title, video.options[which])
-                        UiTools.snacker(requireActivity(), getString(R.string.yt_download_started, video.title))
-                        viewModel.observableSearchText.set("")
-                    }
-                    .setNegativeButton(android.R.string.cancel, null)
-                    .show()
-        }
-        progress.setOnCancelListener { job.cancel() }
+        YouTubeDownloadDialog.newInstance(link!!).show(requireActivity().supportFragmentManager, "fragment_youtube_download")
     }
 
     override fun onEditorAction(v: TextView, actionId: Int, event: KeyEvent?) = false
