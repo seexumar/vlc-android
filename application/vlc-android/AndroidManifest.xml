@@ -1071,6 +1071,23 @@
         <service
                 android:name=".MediaParsingService"
                 android:foregroundServiceType="dataSync" />
+        <!-- "Download with VLC" in the share sheet of the YouTube app and browsers -->
+        <activity
+                android:name=".gui.network.youtube.YouTubeShareActivity"
+                android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout"
+                android:excludeFromRecents="true"
+                android:exported="true"
+                android:label="@string/yt_download_share_label"
+                android:taskAffinity=""
+                android:theme="@style/Theme.VLC.TransparentSheet">
+            <intent-filter android:label="@string/yt_download_share_label">
+                <action android:name="android.intent.action.SEND" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
         <service
                 android:name=".gui.network.youtube.YouTubeDownloadService"
                 android:exported="false"

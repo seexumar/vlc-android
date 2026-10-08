@@ -42,6 +42,25 @@
 
 
     <PreferenceCategory
+            android:key="youtube_download_category"
+            android:title="@string/yt_download_category">
+
+        <ListPreference
+                android:defaultValue="ask"
+                android:entries="@array/youtube_download_quality"
+                android:entryValues="@array/youtube_download_quality_values"
+                android:key="youtube_download_quality"
+                android:summary="@string/yt_download_quality_pref_summary"
+                android:title="@string/yt_download_quality_pref" />
+
+        <CheckBoxPreference
+                android:defaultValue="true"
+                android:key="youtube_download_subtitles"
+                android:summary="@string/yt_download_subtitles_pref_summary"
+                android:title="@string/yt_download_subtitles_pref" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
             android:title="@string/interface_secondary_display_category_title"
             android:key="secondary_display_category">
         <Preference

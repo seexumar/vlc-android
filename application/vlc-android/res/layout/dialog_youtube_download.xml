@@ -53,6 +53,18 @@
                 android:text="@string/yt_download_resolving"
                 android:textColor="?attr/font_light" />
 
+        <CheckBox
+                android:id="@+id/yt_subtitles"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginEnd="16dp"
+                android:textColor="?attr/font_default"
+                android:visibility="gone"
+                tools:text="Include subtitles (English)"
+                tools:visibility="visible" />
+
         <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/yt_option_list"
                 android:layout_width="match_parent"
@@ -62,5 +74,21 @@
                 android:focusable="false"
                 android:visibility="gone"
                 tools:listitem="@layout/item_youtube_download_option" />
+
+        <!-- Shown for a video opened from a playlist (list=…) -->
+        <TextView
+                android:id="@+id/yt_playlist_row"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:background="@drawable/background_chapter_item"
+                android:drawablePadding="16dp"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:text="@string/yt_download_playlist_option"
+                android:textColor="?attr/colorPrimary"
+                android:visibility="gone"
+                tools:visibility="visible" />
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

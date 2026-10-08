@@ -109,6 +109,8 @@ class MRLPanelFragment : BaseFragment(), View.OnKeyListener, TextView.OnEditorAc
 
         binding.play.setOnClickListener(this)
         binding.download.setOnClickListener { downloadYouTubeLink() }
+        // Long-press always shows the quality picker, even when a quality is remembered in settings
+        binding.download.setOnLongClickListener { downloadYouTubeLink(forceAsk = true); true }
 
         return binding.root
     }
@@ -148,6 +150,11 @@ class MRLPanelFragment : BaseFragment(), View.OnKeyListener, TextView.OnEditorAc
             val media = bundle.parcelable<MediaWrapper>(RENAME_DIALOG_MEDIA) ?: return@setFragmentResultListener
             val name = bundle.getString(RENAME_DIALOG_NEW_NAME) ?: return@setFragmentResultListener
             renameStream(media, name)
+        }
+
+        // The download sheet reports a started download: clear the link it came from
+        requireActivity().supportFragmentManager.setFragmentResultListener(YouTubeDownloadDialog.YOUTUBE_DOWNLOAD_STARTED, viewLifecycleOwner) { _, _ ->
+            viewModel.observableSearchText.set("")
         }
 
         PlaybackService.lastError.observe(requireActivity()) {
@@ -199,13 +206,13 @@ class MRLPanelFragment : BaseFragment(), View.OnKeyListener, TextView.OnEditorAc
 
     /**
      * Open the quality picker for the YouTube link in the field.
-     * Resolution happens in [StreamsModel.resolveYouTube], download in [YouTubeDownloadService].
+     * Resolution happens in [org.videolan.vlc.viewmodels.YouTubeDownloadModel], download in [org.videolan.vlc.gui.network.youtube.YouTubeDownloadService].
      */
-    private fun downloadYouTubeLink() {
+    private fun downloadYouTubeLink(forceAsk: Boolean = false) {
         val link = viewModel.observableSearchText.get()?.trim()
         if (!YouTubeExtractor.isYouTubeLink(link)) return
         hideKeyboard()
-        YouTubeDownloadDialog.newInstance(link!!).show(requireActivity().supportFragmentManager, "fragment_youtube_download")
+        YouTubeDownloadDialog.newInstance(link!!, forceAsk).show(requireActivity().supportFragmentManager, "fragment_youtube_download")
     }
 
     override fun onEditorAction(v: TextView, actionId: Int, event: KeyEvent?) = false

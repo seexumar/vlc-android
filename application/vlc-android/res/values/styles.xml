@@ -540,6 +540,18 @@
 
     <style name="VLCTransparentTheme" parent="VLCTransparentThemeLight" />
 
+    <!-- Invisible host for a VLC bottom sheet, e.g. the "Download with VLC" share target. Keeps Theme.VLC attributes. -->
+    <style name="Theme.VLC.TransparentSheet" parent="Theme.VLC">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
+
     <style name="VLCTransparentThemeLight" parent="Theme.MaterialComponents.Light.Dialog.MinWidth">
 
         <item name="android:background">@android:color/transparent</item>

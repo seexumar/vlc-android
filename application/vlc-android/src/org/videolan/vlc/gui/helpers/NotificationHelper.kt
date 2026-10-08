@@ -234,8 +234,10 @@ object NotificationHelper {
      *
      * @param progress download percentage, or a negative value for an indeterminate bar
      * @param ongoing true while the download runs, false for the final result notification
+     * @param cancelIntent shown as a "Cancel" action while [ongoing]
      */
-    fun createYouTubeDownloadNotification(ctx: Context, text: String, progress: Int, ongoing: Boolean, audio: Boolean): Notification {
+    fun createYouTubeDownloadNotification(ctx: Context, text: String, progress: Int, ongoing: Boolean, audio: Boolean,
+                                          cancelIntent: PendingIntent? = null): Notification {
         val intent = Intent(Intent.ACTION_VIEW).setClassName(ctx, START_ACTIVITY)
         val builder = NotificationCompat.Builder(ctx, YOUTUBE_DOWNLOAD_CHANNEL_ID)
                 .setContentIntent(PendingIntent.getActivity(ctx, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
@@ -248,6 +250,7 @@ object NotificationHelper {
                 .setOngoing(ongoing)
                 .setAutoCancel(!ongoing)
         if (ongoing) builder.setCategory(NotificationCompat.CATEGORY_PROGRESS).setProgress(100, progress.coerceAtLeast(0), progress < 0)
+        if (ongoing && cancelIntent != null) builder.addAction(android.R.drawable.ic_menu_close_clear_cancel, ctx.getString(R.string.yt_download_cancel), cancelIntent)
         return builder.build()
     }
 

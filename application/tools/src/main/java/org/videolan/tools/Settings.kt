@@ -334,6 +334,8 @@ const val KEY_VIDEO_MATCH_FRAME_RATE = "video_match_frame_rate"
 
 //Subtitles
 const val KEY_SUBTITLE_PREFERRED_LANGUAGE = "subtitle_preferred_language"
+const val KEY_YOUTUBE_DOWNLOAD_QUALITY = "youtube_download_quality"
+const val KEY_YOUTUBE_DOWNLOAD_SUBTITLES = "youtube_download_subtitles"
 
 
 //UI
