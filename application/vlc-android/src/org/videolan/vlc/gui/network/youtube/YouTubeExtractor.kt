@@ -89,6 +89,9 @@ object YouTubeExtractor {
     /** Playlists are downloaded in bulk; a single video is limited to this many entries to stay under YouTube's rate limits */
     const val MAX_PLAYLIST_SIZE = 200
 
+    /** Streaming is capped here to keep playback smooth on mobile data */
+    private const val MAX_STREAM_HEIGHT = 720
+
     fun isYouTubeLink(text: String?): Boolean = !text.isNullOrBlank() && linkRegex.matches(text.trim())
 
     /** A link to a playlist page, or a video opened from a playlist (list=…) */
@@ -115,6 +118,20 @@ object YouTubeExtractor {
         // Prefer MP4 over WebM at equal height: it can be merged and plays everywhere
         return videos.filter { heightOf(it) <= max }.maxWithOrNull(compareBy<YouTubeDownloadOption>({ heightOf(it) }, { it.extension == "mp4" }))
                 ?: videos.last()
+    }
+
+    /** What VLC plays: [url], with [audioUrl] attached as a slave when the video track has no sound of its own */
+    data class Playable(val title: String, val url: String, val audioUrl: String?)
+
+    /**
+     * Stream for in-app playback: the tallest video up to [MAX_STREAM_HEIGHT] (VLC plays the separate video and audio tracks together,
+     * no merging needed), else the audio-only track.
+     */
+    suspend fun resolvePlayable(link: String): Playable? {
+        val video = resolve(link)
+        val option = video.options.filter { !it.isAudioOnly && heightOf(it) <= MAX_STREAM_HEIGHT }.maxByOrNull { heightOf(it) }
+                ?: video.options.firstOrNull { it.isAudioOnly }
+        return option?.let { Playable(video.title, it.url, it.audioUrl) }
     }
 
     private fun heightOf(option: YouTubeDownloadOption) = Regex("(\\d+)p").find(option.quality)?.groupValues?.get(1)?.toIntOrNull() ?: 0

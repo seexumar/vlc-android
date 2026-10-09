@@ -1453,6 +1453,7 @@
     <string name="yt_download_choose_quality">Choose a quality</string>
     <string name="yt_download_resolving">Reading video information…</string>
     <string name="yt_download_resolve_failed">Couldn\'t read this YouTube link: %s</string>
+    <string name="yt_play_no_streams">No playable stream found for this video</string>
     <string name="yt_download_no_streams">No downloadable stream found for this video</string>
     <string name="yt_download_channel">YouTube downloads</string>
     <string name="yt_download_channel_description">Progress of videos downloaded from YouTube links</string>

@@ -1,6 +1,7 @@
 package org.videolan.vlc.media
 
 import android.content.Intent
+import android.net.Uri
 import android.support.v4.media.session.PlaybackStateCompat
 import android.util.Log
 import android.widget.Toast
@@ -9,6 +10,7 @@ import androidx.core.content.edit
 import androidx.core.net.toUri
 import androidx.lifecycle.MutableLiveData
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -89,6 +91,7 @@ import org.videolan.vlc.R
 import org.videolan.vlc.gui.browser.BaseBrowserFragment
 import org.videolan.vlc.gui.video.VideoPlayerActivity
 import org.videolan.vlc.util.FileUtils
+import org.videolan.vlc.gui.network.youtube.YouTubeExtractor
 import org.videolan.vlc.util.FontCache
 import org.videolan.vlc.util.awaitMedialibraryStarted
 import org.videolan.vlc.util.isSchemeFD
@@ -481,6 +484,20 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
         showAudioPlayer.value = PlayerController.playbackState != PlaybackStateCompat.STATE_STOPPED && (item !== null || !player.isVideoPlaying())
     }
 
+    private suspend fun resolveYouTube(mw: MediaWrapper): YouTubeExtractor.Playable? = try {
+        YouTubeExtractor.resolvePlayable(mw.uri.toString())?.also {
+            if (it.title.isNotEmpty()) mw.title = it.title
+        } ?: run {
+            service.showToast(service.getString(R.string.yt_play_no_streams), Toast.LENGTH_LONG)
+            null
+        }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        service.showToast(service.getString(R.string.yt_download_resolve_failed, e.localizedMessage), Toast.LENGTH_LONG)
+        null
+    }
+
     suspend fun playIndex(index: Int, flags: Int = 0, forceResume:Boolean = false, forceRestart:Boolean = false) {
         // The fonts are scanned when the first text renderer is created, which would otherwise
         // delay the playback by several seconds on the first run. See [FontCache]
@@ -511,6 +528,7 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
         val isVideoPlaying = mw.type == MediaWrapper.TYPE_VIDEO && player.isVideoPlaying()
         setRepeatTypeFromSettings()
         if (!videoBackground && isVideoPlaying) mw.addFlags(MediaWrapper.MEDIA_VIDEO)
+        val audioRequested = mw.hasFlag(MediaWrapper.MEDIA_FORCE_AUDIO)
         if (videoBackground) mw.addFlags(MediaWrapper.MEDIA_FORCE_AUDIO)
         if (isBenchmark) mw.addFlags(MediaWrapper.MEDIA_BENCHMARK)
         parsed = false
@@ -520,6 +538,18 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
         if (mw.type != MediaWrapper.TYPE_VIDEO || isVideoPlaying || player.hasRenderer
                 || mw.hasFlag(MediaWrapper.MEDIA_FORCE_AUDIO)) {
             var uri = withContext(Dispatchers.IO) { FileUtils.getUri(mw.uri) }
+            var youTubeAudioUrl: String? = null
+            // YouTube links stay in the queue as watch URLs and are resolved to a stream only when played, as stream URLs expire
+            if (uri != null && YouTubeExtractor.isYouTubeLink(uri.toString())) {
+                val playable = resolveYouTube(mw)
+                uri = playable?.url?.toUri()
+                youTubeAudioUrl = playable?.audioUrl
+                // The previous item's video surface is gone between two items, which would wrongly force audio. Keep video while the app is on screen
+                if (!audioRequested && isAppStarted()) {
+                    videoBackground = false
+                    mw.removeFlags(MediaWrapper.MEDIA_FORCE_AUDIO)
+                }
+            }
             if (uri == null) {
                 skipMedia()
                 return
@@ -569,6 +599,7 @@ class PlaylistManager(val service: PlaybackService) : MediaWrapperList.EventList
             //todo in VLC 4.0, this should be done by using libvlc_media_player_set_time instead of start-time
             media.addOption(":start-time=${start/1000L}")
             media.addOption(":no-sout-chromecast-video")
+            youTubeAudioUrl?.let { media.addOption(":input-slave=$it") }
             VLCOptions.setMediaOptions(media, ctx, flags or mw.flags, PlaybackService.hasRenderer())
             /* keeping only video during benchmark */
             if (isBenchmark) {

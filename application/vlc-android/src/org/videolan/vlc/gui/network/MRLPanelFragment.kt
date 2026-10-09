@@ -34,6 +34,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.view.ActionMode
 import androidx.core.net.toUri
@@ -44,6 +45,7 @@ import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -67,6 +69,7 @@ import org.videolan.vlc.gui.dialogs.YouTubeDownloadDialog
 import org.videolan.vlc.gui.helpers.UiTools
 import org.videolan.vlc.gui.network.youtube.YouTubeExtractor
 import org.videolan.vlc.interfaces.BrowserFragmentInterface
+import org.videolan.vlc.media.MediaUtils
 import org.videolan.vlc.viewmodels.StreamsModel
 
 const val TAG = "VLC/MrlPanelFragment"
@@ -195,7 +198,13 @@ class MRLPanelFragment : BaseFragment(), View.OnKeyListener, TextView.OnEditorAc
 
     private fun processUri(): Boolean {
         if (!viewModel.observableSearchText.get().isNullOrEmpty()) {
-            val mw = MLServiceLocator.getAbstractMediaWrapper(viewModel.observableSearchText.get()?.trim()?.toUri())
+            val link = viewModel.observableSearchText.get()?.trim()
+            if (YouTubeExtractor.isYouTubeLink(link)) {
+                playYouTubeLink(link!!)
+                viewModel.observableSearchText.set("")
+                return true
+            }
+            val mw =MLServiceLocator.getAbstractMediaWrapper(viewModel.observableSearchText.get()?.trim()?.toUri())
             playMedia(mw)
             viewModel.observableSearchText.set("")
             return true
@@ -203,6 +212,29 @@ class MRLPanelFragment : BaseFragment(), View.OnKeyListener, TextView.OnEditorAc
         return false
     }
 
+
+    /**
+     * Stream a YouTube link. The queue keeps the watch URLs; [org.videolan.vlc.media.PlaylistManager] turns each one
+     * into a playable stream right before it plays. A playlist link queues all its videos, falling back to the single video if it can't be read.
+     */
+    private fun playYouTubeLink(link: String) {
+        hideKeyboard()
+        if (!YouTubeExtractor.isPlaylistLink(link)) return playMedia(youTubeMedia(link))
+        val context = requireContext().applicationContext
+        lifecycleScope.launch {
+            try {
+                val urls = YouTubeExtractor.resolvePlaylist(link).videoUrls
+                if (urls.isEmpty()) throw IllegalStateException(context.getString(R.string.yt_play_no_streams))
+                MediaUtils.openList(activity, urls.map { youTubeMedia(it) }, 0)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                if (YouTubeExtractor.isPlaylistOnlyLink(link)) Toast.makeText(context, context.getString(R.string.yt_download_resolve_failed, e.localizedMessage), Toast.LENGTH_LONG).show()
+                else playMedia(youTubeMedia(link))
+            }
+        }
+    }
+
+    private fun youTubeMedia(url: String) = MLServiceLocator.getAbstractMediaWrapper(url.toUri()).apply { type = MediaWrapper.TYPE_STREAM }
 
     /**
      * Open the quality picker for the YouTube link in the field.
