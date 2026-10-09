@@ -81,7 +81,7 @@
                         android:scaleType="fitCenter"
                         android:visibility="gone"
                         app:srcCompat="@drawable/ic_download"
-                        app:tint="?attr/font_default"
+                        app:tint="@color/standard_selection_orange500"
                         android:background="?attr/selectableItemBackgroundBorderless"
                         app:layout_constraintBottom_toBottomOf="@+id/mrl_edit"
                         app:layout_constraintEnd_toStartOf="@+id/play"
