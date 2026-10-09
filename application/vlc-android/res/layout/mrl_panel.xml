@@ -74,11 +74,11 @@
                 <!-- Shown only when the field holds a YouTube link -->
                 <ImageView
                         android:id="@+id/download"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
                         android:layout_marginEnd="8dp"
                         android:contentDescription="@string/yt_download"
-                        android:scaleType="center"
+                        android:scaleType="fitCenter"
                         android:visibility="gone"
                         app:srcCompat="@drawable/ic_download"
                         app:tint="?attr/font_default"
