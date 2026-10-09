@@ -56,7 +56,7 @@ android {
 }
 
 static def getOSApiKey(project) {
-    return System.getenv('VLC_OPEN_SUBTITLES_API_KEY') ?:  project.properties['vlc_open_subtitles_api_key'] ?: ""
+    return System.getenv('VLC_OPEN_SUBTITLES_API_KEY') ?:  project.findProperty('vlc_open_subtitles_api_key') ?: ""
 }
 
 dependencies {

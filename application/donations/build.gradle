@@ -71,7 +71,7 @@ android {
 }
 
 static def getPublicApiKey(project) {
-   return System.getenv('K8S_SECRET_VLC_PLAYSTORE_PUBLIC_API_KEY') ?:  project.properties['vlc_playstore_public_api_key'] ?: ""
+   return System.getenv('K8S_SECRET_VLC_PLAYSTORE_PUBLIC_API_KEY') ?:  project.findProperty('vlc_playstore_public_api_key') ?: ""
 }
 
 dependencies {

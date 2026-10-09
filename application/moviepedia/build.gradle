@@ -79,5 +79,5 @@ dependencies {
 }
 
 static def getMoviepediaUrl(project) {
-    if (project.hasProperty('moviepedia_api_url')) return project.properties['moviepedia_api_url'] else return  "https://localhost/"
+    if (project.hasProperty('moviepedia_api_url')) return project.findProperty('moviepedia_api_url') else return  "https://localhost/"
 }
